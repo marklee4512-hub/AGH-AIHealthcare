@@ -81,13 +81,38 @@ const translations = {
   }
 };
 
-export default function MenuScreen({ onSelect, onBack, language = 'ko', setLanguage }) {
+export default function MenuScreen({ 
+  onSelect, 
+  onSelectCourse, 
+  onBack, 
+  language = 'ko', 
+  setLanguage, 
+  onLanguageChange 
+}) {
   const t = translations[language] || translations.ko;
+
+  // 두 가지 연결 방식(onSelect 또는 onSelectCourse)을 모두 지원
+  const handleSelect = (type) => {
+    if (onSelectCourse) {
+      onSelectCourse(type);
+    } else if (onSelect) {
+      onSelect(type);
+    }
+  };
+
+  // 두 가지 언어 변경 방식(onLanguageChange 또는 setLanguage)을 모두 지원
+  const handleLanguage = (lang) => {
+    if (onLanguageChange) {
+      onLanguageChange(lang);
+    } else if (setLanguage) {
+      setLanguage(lang);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-between min-h-screen bg-gradient-to-br from-slate-950 via-teal-950 to-slate-900 text-white p-6 md:p-10 select-none">
       
-      {/* 1. 상단 바: 좌측(버튼) - 중앙(큼직한 로고) - 우측(언어/상태) 3분할 */}
+      {/* 1. 상단 바: 좌측(버튼) - 중앙(로고) - 우측(언어/상태) */}
       <div className="w-full max-w-6xl grid grid-cols-3 items-center border-b border-emerald-500/20 pb-5">
         
         {/* 좌측: 뒤로가기 */}
@@ -101,7 +126,7 @@ export default function MenuScreen({ onSelect, onBack, language = 'ko', setLangu
           </button>
         </div>
 
-        {/* 중앙: 큼직하고 시원해진 로고 컨테이너 */}
+        {/* 중앙: 로고 */}
         <div className="flex justify-center">
           <div className="p-3 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-md shadow-xl flex items-center justify-center">
             <img 
@@ -114,22 +139,20 @@ export default function MenuScreen({ onSelect, onBack, language = 'ko', setLangu
 
         {/* 우측: 언어 토글 및 상태 */}
         <div className="flex justify-end items-center gap-3">
-          {setLanguage && (
-            <div className="flex items-center bg-slate-900/80 border border-slate-700 rounded-full p-1.5 shadow-md">
-              <Globe className="w-4 h-4 text-slate-400 ml-2 mr-1" />
-              <div className="flex gap-1">
-                {['ko', 'en', 'zh', 'ja'].map((lang) => (
-                  <button 
-                    key={lang}
-                    onClick={() => setLanguage(lang)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${language === lang ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    {lang === 'ko' ? 'KO' : lang === 'en' ? 'EN' : lang === 'zh' ? '中' : '日'}
-                  </button>
-                ))}
-              </div>
+          <div className="flex items-center bg-slate-900/80 border border-slate-700 rounded-full p-1.5 shadow-md">
+            <Globe className="w-4 h-4 text-slate-400 ml-2 mr-1" />
+            <div className="flex gap-1">
+              {['ko', 'en', 'zh', 'ja'].map((lang) => (
+                <button 
+                  key={lang}
+                  onClick={() => handleLanguage(lang)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${language === lang ? 'bg-emerald-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
+                >
+                  {lang === 'ko' ? 'KO' : lang === 'en' ? 'EN' : lang === 'zh' ? '中' : '日'}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -155,8 +178,9 @@ export default function MenuScreen({ onSelect, onBack, language = 'ko', setLangu
       {/* 3. 2대 선택 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full my-auto">
         
+        {/* 얼굴 종합 분석 카드 */}
         <div 
-          onClick={() => onSelect('face')}
+          onClick={() => handleSelect('face')}
           className="group relative flex flex-col justify-between bg-slate-900/90 border-2 border-emerald-500/40 hover:border-emerald-300 rounded-3xl p-8 backdrop-blur-md shadow-2xl transition-all duration-200 cursor-pointer active:scale-[0.98]"
         >
           <div>
@@ -191,8 +215,9 @@ export default function MenuScreen({ onSelect, onBack, language = 'ko', setLangu
           </div>
         </div>
 
+        {/* 손 스캔 분석 카드 */}
         <div 
-          onClick={() => onSelect('hand')}
+          onClick={() => handleSelect('hand')}
           className="group relative flex flex-col justify-between bg-slate-900/90 border-2 border-teal-500/40 hover:border-teal-300 rounded-3xl p-8 backdrop-blur-md shadow-2xl transition-all duration-200 cursor-pointer active:scale-[0.98]"
         >
           <div>
