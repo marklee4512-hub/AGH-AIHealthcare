@@ -60,10 +60,13 @@ export default function App() {
     <div className="w-screen h-screen overflow-hidden select-none bg-slate-950 font-sans text-white">
       {step === 'idle' && (
         <IdleScreen 
-          onStart={(lang) => {
-            setLanguage(lang || 'ko');
-            setStep('menu');
-          }} 
+          language={language}
+          setLanguage={setLanguage}
+          onStart={() => setStep('menu')}
+          onDirectStart={(type) => {
+            setScanType(type);
+            setStep('survey');
+          }}
         />
       )}
 
