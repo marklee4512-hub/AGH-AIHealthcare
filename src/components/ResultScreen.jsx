@@ -220,7 +220,14 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
   const [showExpertModal, setShowExpertModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // ★ 다국어 JSON 필드에 맞춰 언어별 키값 가져오는 헬퍼 함수
+  // 실시간 계산 점수 반영 (기본값 폴백 82)
+  const currentVitalScore = result?.vitalScore || 82;
+  const currentDetailScores = {
+    circulation: result?.detailScores?.circulation || Math.min(95, currentVitalScore - 6),
+    metabolism: result?.detailScores?.metabolism || Math.min(95, currentVitalScore - 2),
+    vitality: result?.detailScores?.vitality || Math.min(95, currentVitalScore + 1)
+  };
+
   const getLangField = (prod, fieldName) => {
     if (!prod) return '';
     const langKey = language === 'ko' ? '' : language.charAt(0).toUpperCase() + language.slice(1);
@@ -242,7 +249,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
       case 'circulation': return t.badgeCirculation;
       case 'joint': return t.badgeJoint;
       case 'immunity': return t.badgeImmunity;
-      case 'other': return t.badgeOther; // 전신 항노화 활력
+      case 'other': return t.badgeOther;
       default: return t.generalBalance;
     }
   };
@@ -255,7 +262,6 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
     return t.drugSafeNone;
   };
 
-  // ★ Web Audio API 기반 "딩동" 호출 사운드 생성
   const playDingDong = () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -272,8 +278,8 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
         osc.start(audioCtx.currentTime + startTime);
         osc.stop(audioCtx.currentTime + startTime + duration);
       };
-      playTone(659.25, 0, 0.5); // E5 (미)
-      playTone(523.25, 0.4, 0.8); // C5 (도)
+      playTone(659.25, 0, 0.5);
+      playTone(523.25, 0.4, 0.8);
     } catch (e) {
       console.log("Audio not supported");
     }
@@ -284,8 +290,13 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
     setShowExpertModal(true);
   };
 
-  // 1:1 맞춤 정품 선별 (로얄젤리 보완 완료)
+  // 1:1 맞춤 추천 목록: CameraScreen에서 계산된 결과가 있으면 최우선 반영
   useEffect(() => {
+    if (result?.recommendedProducts && result.recommendedProducts.length > 0) {
+      setRecommendedProducts(result.recommendedProducts);
+      return;
+    }
+
     let allList = [];
     if (productsData && Array.isArray(productsData)) {
       allList = productsData;
@@ -318,11 +329,9 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
       } else if (concernId === 'immunity') {
         candidate = allList.find(p => !usedNames.has(p.name) && (p.category?.includes('면역') || p.name.includes('프로폴리스')));
       } else if (concernId === 'other') {
-        // ★ [기타 전신]일 경우 로얄젤리, 종합, 스피루리나, 마린콜라겐 등을 우선 매칭
         candidate = allList.find(p => !usedNames.has(p.name) && (p.name.includes('로얄젤리') || p.name.includes('콜라겐') || p.category?.includes('기타')));
       }
 
-      // 조건에 맞는 게 없으면 그냥 아무거나 남은 거 하나
       if (!candidate) {
         candidate = allList.find(p => !usedNames.has(p.name));
       }
@@ -382,7 +391,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
       {/* 2. 메인 바디 */}
       <div className="flex-1 w-full max-w-[1440px] mx-auto p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-7">
         
-        {/* 좌측 패널 */}
+        {/* 좌측 패널: 동적 점수 및 바이탈 그래프 */}
         <div className="lg:col-span-4 flex flex-col gap-5">
           <div className="bg-slate-900/90 border border-emerald-500/30 rounded-3xl p-6 md:p-7 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-bl-full blur-2xl pointer-events-none"></div>
@@ -394,7 +403,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
 
             <div className="flex items-center gap-5 mb-7">
               <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-emerald-400 flex items-center justify-center bg-slate-950 shadow-[0_0_20px_rgba(52,211,153,0.3)] shrink-0">
-                <span className="text-4xl md:text-5xl font-black text-white">88</span>
+                <span className="text-4xl md:text-5xl font-black text-white">{currentVitalScore}</span>
                 <span className="absolute bottom-2 text-[10px] text-emerald-400 font-bold">점/100</span>
               </div>
               <div className="flex-1">
@@ -408,11 +417,12 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
               </div>
             </div>
 
+            {/* 실시간 계산된 동적 수치 반영 바 */}
             <div className="space-y-4">
               {[
-                { icon: <Activity className="w-4 h-4 text-cyan-400"/>, label: t.bar1, val: 78, color: "from-cyan-500 to-blue-400" },
-                { icon: <Zap className="w-4 h-4 text-amber-400"/>, label: t.bar2, val: 84, color: "from-amber-500 to-orange-400" },
-                { icon: <Droplets className="w-4 h-4 text-emerald-400"/>, label: t.bar3, val: 88, color: "from-emerald-500 to-teal-400" }
+                { icon: <Activity className="w-4 h-4 text-cyan-400"/>, label: t.bar1, val: currentDetailScores.circulation, color: "from-cyan-500 to-blue-400" },
+                { icon: <Zap className="w-4 h-4 text-amber-400"/>, label: t.bar2, val: currentDetailScores.metabolism, color: "from-amber-500 to-orange-400" },
+                { icon: <Droplets className="w-4 h-4 text-emerald-400"/>, label: t.bar3, val: currentDetailScores.vitality, color: "from-emerald-500 to-teal-400" }
               ].map((item, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between items-center mb-1.5 text-xs md:text-sm font-bold text-slate-200">
@@ -420,7 +430,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
                     <span>{item.val}%</span>
                   </div>
                   <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                    <div className={`h-full bg-gradient-to-r ${item.color} shadow-lg`} style={{ width: `${item.val}%` }}></div>
+                    <div className={`h-full bg-gradient-to-r ${item.color} shadow-lg transition-all duration-500`} style={{ width: `${item.val}%` }}></div>
                   </div>
                 </div>
               ))}
@@ -440,7 +450,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
           </div>
         </div>
 
-        {/* 우측 패널 (다국어 JSON 맵핑 완료) */}
+        {/* 우측 패널: 맞춤 제품 3선 동적 렌더링 */}
         <div className="lg:col-span-8 flex flex-col bg-slate-900/60 border border-slate-800 rounded-3xl p-6 md:p-7 justify-between">
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -485,11 +495,10 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
                           {t.concernBadgePre}: {badgeText}
                         </span>
                         <span className="text-[11px] font-bold text-slate-400">
-                          추천 0{index + 1}
+                          {prod.rank || `추천 0${index + 1}`}
                         </span>
                       </div>
 
-                      {/* ★ 다국어 자동 변환 적용 부분 */}
                       <h3 className="text-base md:text-lg font-bold text-white group-hover:text-emerald-300 transition-colors leading-snug mb-1.5">
                         {getLangField(prod, 'name')}
                       </h3>
@@ -540,7 +549,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
         </div>
       </div>
 
-      {/* 4. 제품 상세 팝업 (다국어 완벽 적용) */}
+      {/* 4. 제품 상세 팝업 */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-6 animate-in fade-in duration-200">
           <div className="relative w-full max-w-3xl bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -646,7 +655,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
         </div>
       )}
 
-      {/* QR 모달 */}
+      {/* QR 모달 (실제 동적 점수 연동) */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-6 animate-in fade-in duration-200">
           <div className="relative w-full max-w-xl bg-slate-900 border-2 border-emerald-500/50 rounded-3xl p-8 shadow-2xl text-center">
@@ -665,7 +674,7 @@ export default function ResultScreen({ result, scanType, onReset, language = 'ko
 
             <div className="w-56 h-56 mx-auto bg-white p-4 rounded-2xl shadow-2xl flex flex-col items-center justify-center mb-6 border-4 border-emerald-400">
               <img 
-                src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://aghgreenhealth.com/report?id=88" 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://aghgreenhealth.com/report?score=${currentVitalScore}`} 
                 alt="QR Code" 
                 className="w-full h-full object-contain"
               />
