@@ -6,16 +6,14 @@ import CameraScreen from './components/CameraScreen';
 import ResultScreen from './components/ResultScreen';
 
 export default function App() {
-  // 화면 단계: 'idle' -> 'menu' -> 'survey' -> 'camera' -> 'result'
   const [step, setStep] = useState('idle');
-  const [language, setLanguage] = useState('ko'); // ko, en, zh, ja
-  const [scanType, setScanType] = useState('face'); // face, hand
+  const [language, setLanguage] = useState('ko');
+  const [scanType, setScanType] = useState('face');
   const [surveyData, setSurveyData] = useState(null);
   const [scanResult, setScanResult] = useState(null);
 
-  // ★ 무조작 자동 리셋 타이머 (90초)
   const timeoutRef = useRef(null);
-  const IDLE_TIMEOUT_MS = 90 * 1000; // 90초
+  const IDLE_TIMEOUT_MS = 90 * 1000;
 
   const resetToIdle = () => {
     setStep('idle');
@@ -28,7 +26,6 @@ export default function App() {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    // 대기 화면이 아닐 때만 90초 타이머 동작
     if (step !== 'idle') {
       timeoutRef.current = setTimeout(() => {
         resetToIdle();
@@ -37,10 +34,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    // 터치, 마우스 클릭, 키 입력 감지하여 타이머 갱신
     const events = ['mousedown', 'mousemove', 'touchstart', 'keydown', 'scroll'];
     events.forEach(evt => window.addEventListener(evt, handleUserActivity));
-
     handleUserActivity();
 
     return () => {
@@ -49,7 +44,6 @@ export default function App() {
     };
   }, [step]);
 
-  // ★ 키오스크 환경: 마우스 우클릭 방지
   useEffect(() => {
     const handleContextMenu = (e) => e.preventDefault();
     window.addEventListener('contextmenu', handleContextMenu);
@@ -98,6 +92,7 @@ export default function App() {
         <CameraScreen 
           language={language}
           scanType={scanType}
+          surveyData={surveyData}
           onComplete={(scanRes) => {
             setScanResult({
               ...scanRes,
